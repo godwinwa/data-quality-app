@@ -1,0 +1,248 @@
+<!-- templates/results.html -->
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">Data Quality Report: {{ filename }}</h3>
+                <a href="{{ url_for('download_report') }}" class="btn btn-light btn-sm">
+                    Download Report
+                </a>
+            </div>
+            <div class="card-body">
+                <h4>Data Summary</h4>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card mb-3">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Rows</h5>
+                                <p class="display-5">{{ report.summary.row_count }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card mb-3">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Columns</h5>
+                                <p class="display-5">{{ report.summary.column_count }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card mb-3">
+                            <div class="card-body text-center">
+                                <h5 class="card-title">Memory Usage</h5>
+                                <p class="display-5">{{ report.summary.memory_usage }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h5>Data Sample</h5>
+                    <div class="table-responsive">
+                        {{ sample_data|safe }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Missing Values Section -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">Missing Values</h4>
+            </div>
+            <div class="card-body">
+                {% if report.missing_values %}
+                    {% if report.visualizations.missing_values %}
+                        <div class="mb-4">
+                            {{ report.visualizations.missing_values|safe }}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Column</th>
+                                    <th>Missing Count</th>
+                                    <th>Missing %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in report.missing_values %}
+                                    {% if item.missing_count > 0 %}
+                                    <tr>
+                                        <td>{{ item.column }}</td>
+                                        <td>{{ item.missing_count }}</td>
+                                        <td>{{ item.missing_percent }}%</td>
+                                    </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        No missing values found in the dataset.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Outliers Section -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Outliers</h4>
+            </div>
+            <div class="card-body">
+                {% if report.outliers %}
+                    {% if report.visualizations.outliers %}
+                        <div class="mb-4">
+                            {{ report.visualizations.outliers|safe }}
+                        </div>
+                    {% endif %}
+                    
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Column</th>
+                                    <th>Outlier Count</th>
+                                    <th>Outlier %</th>
+                                    <th>Range</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for col, data in report.outliers.items() %}
+                                <tr>
+                                    <td>{{ col }}</td>
+                                    <td>{{ data.count }}</td>
+                                    <td>{{ data.percent }}%</td>
+                                    <td>{{ data.min }} to {{ data.max }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-success">
+                        <i class="bi bi-check-circle-fill me-2"></i>
+                        No significant outliers detected.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Data Types Section -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">Data Types</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Column</th>
+                                <th>Data Type</th>
+                                <th>Unique Values</th>
+                                <th>Sample Values</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in report.data_types %}
+                            <tr>
+                                <td>{{ item.column }}</td>
+                                <td>{{ item.dtype }}</td>
+                                <td>{{ item.unique_values }}</td>
+                                <td>{{ item.samples }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                {% if report.type_issues %}
+                <div class="mt-4">
+                    <h5>Potential Type Issues</h5>
+                    <table class="table table-warning">
+                        <thead>
+                            <tr>
+                                <th>Column</th>
+                                <th>Current Type</th>
+                                <th>Suggested Type</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for issue in report.type_issues %}
+                            <tr>
+                                <td>{{ issue.column }}</td>
+                                <td>{{ issue.current_type }}</td>
+                                <td>{{ issue.suggested_type }}</td>
+                                <td>{{ issue.reason }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Duplicates Section -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-warning">
+                <h4 class="mb-0">Duplicates</h4>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <div class="card text-center mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">Duplicate Rows</h5>
+                            <p class="display-5">{{ report.duplicates.full_duplicate_count }}</p>
+                            <p class="text-muted">{{ report.duplicates.full_duplicate_percent }}% of data</p>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if report.duplicates.column_duplicates %}
+                <div class="mt-4">
+                    <h5>Column Value Duplicates</h5>
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Column</th>
+                                <th>Unique Duplicate Values</th>
+                                <th>Examples</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for col, data in report.duplicates.column_duplicates.items() %}
+                            <tr>
+                                <td>{{ col }}</td>
+                                <td>{{ data.count }}</td>
+                                <td>{{ data.examples }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
